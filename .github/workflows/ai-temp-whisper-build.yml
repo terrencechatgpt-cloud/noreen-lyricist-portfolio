@@ -1,0 +1,47 @@
+name: ai-temp-whisper-build
+
+on:
+  push:
+    branches: [ai-temp-whisper-build-20260806]
+    paths:
+      - .github/workflows/ai-temp-whisper-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-vad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download whisper.cpp Silero VAD model
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p artifact
+          curl -L --fail --retry 5 -o artifact/ggml-silero-v6.2.0.bin \
+            https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v6.2.0.bin
+          (cd artifact && sha256sum ggml-silero-v6.2.0.bin > SHA256SUMS.txt)
+      - name: Upload VAD model
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-vad-model
+          path: artifact/
+          compression-level: 0
+          retention-days: 1
+      - name: Record workflow run ID on the temporary branch
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+          TEMP_BRANCH: ai-temp-whisper-build-20260806
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch "$TEMP_BRANCH" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" repo
+          printf '%s\n' "$RUN_ID" > repo/ai-temp-whisper-run-id.txt
+          cd repo
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ai-temp-whisper-run-id.txt
+          git commit -m "chore: record temporary VAD artifact run [skip ci]"
+          git push origin "HEAD:$TEMP_BRANCH"
