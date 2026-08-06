@@ -3,10 +3,12 @@ name: ai-temp-whisper-build
 on:
   push:
     branches: [ai-temp-whisper-build-20260806]
+    paths:
+      - .github/workflows/ai-temp-whisper-build.yml
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-whisper:
@@ -32,3 +34,18 @@ jobs:
           path: artifact/
           compression-level: 0
           retention-days: 1
+      - name: Record workflow run ID on the temporary branch
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+          TEMP_BRANCH: ai-temp-whisper-build-20260806
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch "$TEMP_BRANCH" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" repo
+          printf '%s\n' "$RUN_ID" > repo/ai-temp-whisper-run-id.txt
+          cd repo
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ai-temp-whisper-run-id.txt
+          git commit -m "chore: record temporary Whisper artifact run [skip ci]"
+          git push origin "HEAD:$TEMP_BRANCH"
