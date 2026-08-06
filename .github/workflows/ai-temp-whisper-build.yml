@@ -24,10 +24,12 @@ jobs:
           cmake --build whisper.cpp/build --config Release -j 2
           mkdir -p artifact
           cp whisper.cpp/build/bin/whisper-cli artifact/
+          find whisper.cpp/build -name '*.so*' -exec cp -av '{}' artifact/ \;
           curl -L --fail --retry 5 -o artifact/ggml-small-q5_1.bin \
             https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin
-          sha256sum artifact/* > artifact/SHA256SUMS.txt
-      - name: Upload Linux binary and model
+          (cd artifact && sha256sum ggml-small-q5_1.bin whisper-cli > SHA256SUMS.txt)
+          LD_LIBRARY_PATH="$PWD/artifact" ldd artifact/whisper-cli
+      - name: Upload Linux binary, shared libraries, and model
         uses: actions/upload-artifact@v4
         with:
           name: whisper-linux-small-q5_1
