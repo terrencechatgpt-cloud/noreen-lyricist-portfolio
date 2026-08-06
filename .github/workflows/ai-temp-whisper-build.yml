@@ -1,8 +1,8 @@
 name: ai-temp-whisper-build
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [ai-temp-whisper-build-20260806]
   workflow_dispatch:
 
 permissions:
